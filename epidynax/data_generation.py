@@ -20,7 +20,7 @@ def sir_model(par: list, time: np.ndarray, beta: float, gamma: float) -> list:
         ValueError: Beta and gamma must be non-negative.
 
     Returns:
-        list: List containing the derivatives [dS, dI, dR] at each time point.
+        list: List containing the derivatives at each time point.
     """
     susceptible, infected, recovered = par
     population_size = susceptible + infected + recovered
@@ -43,7 +43,42 @@ def sir_model(par: list, time: np.ndarray, beta: float, gamma: float) -> list:
     return [derivative_susceptible, derivative_infected, derivative_recovered]
 
 
-def ode_solver(par: list, time: np.ndarray, beta: float, gamma: float) -> np.ndarray:
+# pylint: disable=unused-argument
+def sir_model_proportion(
+    par: list, time: np.ndarray, beta: float, gamma: float
+) -> list:
+    """SIR model using proportions (S, I, R as fractions of total population).
+
+    Args:
+        par (list): List containing current values of S, I, and R (proportions).
+        time (np.ndarray): Array of time points.
+        beta (float): Infection rate.
+        gamma (float): Recovery rate.
+
+    Raises:
+        ValueError: Proportions must be between 0 and 1 and sum to 1 (within tolerance).
+        ValueError: Beta and gamma must be non-negative.
+
+    Returns:
+        list: Derivatives at each time point.
+    """
+    susceptible, infected, recovered = par
+    total = susceptible + infected + recovered
+    if not np.isclose(total, 1.0, atol=1e-6):
+        raise ValueError("S, I, R proportions must sum to 1")
+    if any(x < 0 or x > 1 for x in [susceptible, infected, recovered]):
+        raise ValueError("S, I, R proportions must be between 0 and 1")
+    if beta < 0 or gamma < 0:
+        raise ValueError("Beta and gamma must be non-negative")
+    derivative_susceptible = -beta * susceptible * infected
+    derivative_infected = beta * susceptible * infected - gamma * infected
+    derivative_recovered = gamma * infected
+    return [derivative_susceptible, derivative_infected, derivative_recovered]
+
+
+def ode_solver(
+    par: list, time: np.ndarray, beta: float, gamma: float, proportion: bool = True
+) -> np.ndarray:
     """Solve the SIR model using the odeint function from scipy.integrate.
 
     Args:
@@ -51,10 +86,14 @@ def ode_solver(par: list, time: np.ndarray, beta: float, gamma: float) -> np.nda
         time (np.ndarray): Array of time points at which to solve the ODE.
         beta (float): Infection rate of the disease.
         gamma (float): Recovery rate of the disease.
+        proportion (bool): If True, use proportions for S, I, R; otherwise use counts.
 
     Returns:
         np.ndarray: Array containing the solution of the SIR model at each time point.
     """
     # Solve the SIR model using odeint
-    result = odeint(sir_model, par, time, args=(beta, gamma))
+    if proportion:
+        result = odeint(sir_model_proportion, par, time, args=(beta, gamma))
+    else:
+        result = odeint(sir_model, par, time, args=(beta, gamma))
     return result
