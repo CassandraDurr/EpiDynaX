@@ -7,5 +7,11 @@
 ```
 conda create -n epidynax_env python=3.11 -y
 conda activate epidynax_env
-pip install -r requirements.txt
+pip install -r requirements/requirements.txt
+```
+Additional dependencies are required for contributing to the package. These dependencies include tools for code formatting and quality checking.
+
+To install these additional dependencies, run the following command from the top-level of the repository:
+```
+pip install -r requirements/requirements-dev.txt
 ```
