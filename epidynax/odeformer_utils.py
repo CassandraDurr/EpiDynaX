@@ -1,5 +1,8 @@
 """Module for ODEFormer utility functions."""
 
+import io
+from contextlib import redirect_stdout
+
 import numpy as np
 from matplotlib import pyplot as plt
 from odeformer.model import SymbolicTransformerRegressor
@@ -46,9 +49,30 @@ def plot_actual_vs_estimated_trajectory(
     """
     fig, ax = plt.subplots(figsize=figsize)
     # Actuals
-    ax.plot(times, trajectory[:, 0], label="Susceptible (Actual)", color="blue")
-    ax.plot(times, trajectory[:, 1], label="Infected (Actual)", color="red")
-    ax.plot(times, trajectory[:, 2], label="Recovered (Actual)", color="green")
+    ax.scatter(
+        times,
+        trajectory[:, 0],
+        label="Susceptible (Actual)",
+        color="blue",
+        marker="o",
+        alpha=0.3,
+    )
+    ax.scatter(
+        times,
+        trajectory[:, 1],
+        label="Infected (Actual)",
+        color="red",
+        marker="o",
+        alpha=0.3,
+    )
+    ax.scatter(
+        times,
+        trajectory[:, 2],
+        label="Recovered (Actual)",
+        color="green",
+        marker="o",
+        alpha=0.3,
+    )
     # Estimates
     ax.plot(
         times,
@@ -79,3 +103,14 @@ def plot_actual_vs_estimated_trajectory(
     fig.tight_layout()
 
     return fig
+
+
+# pylint: disable=invalid-name
+def print_SIR_equations(dstr: SymbolicTransformerRegressor) -> None:
+    """Print the SIR model equations from the ODEFormer output."""
+    f = io.StringIO()
+    with redirect_stdout(f):
+        dstr.print(n_predictions=1)
+    output = f.getvalue()
+    output = output.replace("x_0", "S").replace("x_1", "I").replace("x_2", "R")
+    print(output)
