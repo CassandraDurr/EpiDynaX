@@ -97,3 +97,43 @@ def ode_solver(
     else:
         result = odeint(sir_model, par, time, args=(beta, gamma))
     return result
+
+
+# pylint: disable=too-many-positional-arguments
+def generate_noisy_sir_data(
+    par: list,
+    time: np.ndarray,
+    beta: float,
+    gamma: float,
+    proportion: bool = True,
+    noise_std: float = 0.01,
+) -> np.ndarray:
+    """
+    Generate noisy SIR data using the ode_solver.
+
+    Args:
+        par (list): Initial values of S, I, R (counts or proportions).
+        time (np.ndarray): Time points.
+        beta (float): Infection rate.
+        gamma (float): Recovery rate.
+        proportion (bool): Use proportions if True, else counts.
+        noise_std (float): Standard deviation of Gaussian noise.
+
+    Returns:
+        np.ndarray: Noisy SIR data.
+    """
+    np.random.seed(19980801)
+
+    clean_data = ode_solver(par, time, beta, gamma, proportion=proportion)
+    noise = np.random.normal(0, noise_std, clean_data.shape)
+    noisy_data = clean_data + noise
+
+    if proportion:
+        # Ensure proportions remain in [0,1] and sum to 1
+        noisy_data = np.clip(noisy_data, 0, 1)
+        noisy_data = noisy_data / noisy_data.sum(axis=1, keepdims=True)
+    else:
+        # Ensure counts are non-negative and round to integers
+        noisy_data = np.clip(noisy_data, 0, None)
+        noisy_data = np.round(noisy_data)
+    return noisy_data
