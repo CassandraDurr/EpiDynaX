@@ -1,6 +1,7 @@
 """Module which generates S, I, R data using odeint."""
 
 import numpy as np
+from scipy import stats
 from scipy.integrate import odeint
 
 
@@ -122,18 +123,30 @@ def generate_noisy_sir_data(
     Returns:
         np.ndarray: Noisy SIR data.
     """
+    # Set seed
     np.random.seed(19980801)
 
+    # Obtain clean SIR data
     clean_data = ode_solver(par, time, beta, gamma, proportion=proportion)
-    noise = np.random.normal(0, noise_std, clean_data.shape)
-    noisy_data = clean_data + noise
+    susceptible, infected, recovered = clean_data.T
 
-    if proportion:
-        # Ensure proportions remain in [0,1] and sum to 1
-        noisy_data = np.clip(noisy_data, 0, 1)
-        noisy_data = noisy_data / noisy_data.sum(axis=1, keepdims=True)
-    else:
-        # Ensure counts are non-negative and round to integers
-        noisy_data = np.clip(noisy_data, 0, None)
-        noisy_data = np.round(noisy_data)
+    # Get population size
+    population_size = susceptible[0] + infected[0] + recovered[0]
+
+    # Generate noisy data
+    infected_noisy = stats.truncnorm.rvs(
+        a=0, b=population_size, loc=infected, scale=noise_std, size=susceptible.shape
+    )
+    susceptible_noisy = stats.truncnorm.rvs(
+        a=0,
+        b=population_size - infected_noisy,
+        loc=susceptible,
+        scale=noise_std,
+        size=susceptible.shape,
+    )
+    recovered_noisy = population_size - susceptible_noisy - infected_noisy
+
+    # Stack the noisy data
+    noisy_data = np.vstack([susceptible_noisy, infected_noisy, recovered_noisy]).T
+
     return noisy_data
